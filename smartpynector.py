@@ -1,5 +1,6 @@
 '''
-This is a python wrapper for the Knowledge Engine REST API.
+This is a python wrapper for the Knowledge Engine Smart Connector REST API.
+See https://gitlab.inesctec.pt/interconnect-public/knowledge-engine/-/blob/main/openapi-sc.yaml
 '''
 
 import httpx
@@ -22,7 +23,7 @@ class SmartConnector(BaseModel):
 
     def create_smart_connector(self, knowledge_engine_url: AnyUrl):
         """
-        Create a Smart Connector
+        Create a new Smart Connector for the given Knowledge Base.
         :param knowledge_engine_url: url of the Knowledge Engine
         :return: response of the request
         """
@@ -47,6 +48,15 @@ class SmartConnector(BaseModel):
             prefixes: dict,
             graph_pattern: str,
     ):
+        """
+        Register a Knowledge Interaction for a Smart Connector
+        :param knowledge_engine_url: url of the Knowledge Engine
+        :param knowledge_interaction_type: type of Knowledge Interaction [AskKnowledgeInteraction,
+                                                                            AnswerKnowledgeInteraction, more to come]
+        :param prefixes: prefixes used in the graph pattern
+        :param graph_pattern: the graph pattern of the Knowledge Interaction in SPARQL as a string
+        :return: response of the request
+        """
         headers = {
             'Content-Type': 'application/json',
             'Knowledge-Base-Id': self.knowledgeBaseId,
@@ -54,7 +64,7 @@ class SmartConnector(BaseModel):
 
         if knowledge_interaction_type == 'AskKnowledgeInteraction':
             ask_ki_data = {
-                "knowledgeInteractionType": "AskKnowledgeInteraction",}
+                "knowledgeInteractionType": "AskKnowledgeInteraction", }
             # TODO: add the rest of the AskKnowledgeInteraction data
 
         elif knowledge_interaction_type == 'AnswerKnowledgeInteraction':
