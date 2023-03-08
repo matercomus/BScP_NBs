@@ -32,6 +32,25 @@ def check_request_status(r):
         logging.error(r.text)
 
 
+def create_smart_connector(smart_connector_obj: SmartConnector, knowledge_engine_url: AnyUrl):
+    """
+    Create a new Smart Connector for the given Knowledge Base.
+    :param smart_connector_obj: smart connector object
+    :param knowledge_engine_url: url of the Knowledge Engine
+    :return: response of the request
+    """
+    headers = {
+        'Content-Type': 'application/json',
+        'Knowledge-Base-Id': smart_connector_obj.knowledgeBaseId,
+    }
+    r = httpx.post(knowledge_engine_url + '/sc', headers=headers, json=smart_connector_obj.dict())
+
+    # check if the request was successful
+    check_request_status(r)
+
+    return r
+
+
 # TODO: add support for other types of Knowledge Interactions
 def register_knowledge_interaction(knowledge_interaction_type: str, knowledge_engine_url: AnyUrl, prefixes: dict,
                                    graph_pattern: str, headers: dict):
@@ -55,18 +74,47 @@ def register_knowledge_interaction(knowledge_interaction_type: str, knowledge_en
     return r
 
 
-def create_smart_connector(smart_connector_obj: SmartConnector, knowledge_engine_url: AnyUrl):
-    """
-    Create a new Smart Connector for the given Knowledge Base.
-    :param smart_connector_obj: smart connector object
-    :param knowledge_engine_url: url of the Knowledge Engine
-    :return: response of the request
-    """
+def perform_ask_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge_base_id: AnyUrl,
+                                      knowledge_interaction_id: AnyUrl, ask_data: dict = []):
     headers = {
-        'Content-Type': 'application/json',
-        'Knowledge-Base-Id': smart_connector_obj.knowledgeBaseId,
+        "Knowledge-Base-Id": knowledge_base_id,
+        "Knowledge-Interaction-Id": knowledge_interaction_id,
     }
-    r = httpx.post(knowledge_engine_url + '/sc', headers=headers, json=smart_connector_obj.dict())
+
+    r = httpx.post(knowledge_engine_url + '/sc/ask', headers=headers, json=ask_data)
+
+    # check if the request was successful
+    check_request_status(r)
+
+    return r
+
+
+def perform_answer_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge_base_id: AnyUrl,
+                                         knowledge_interaction_id: AnyUrl, answer_binding_set: dict):
+    handle_headers = {
+        "Content-Type": "application/json",
+        "Knowledge-Base-Id": knowledge_base_id,
+    }
+
+    handle_request = httpx.get(knowledge_engine_url + '/sc/handle', headers=handle_headers, timeout=None)
+
+    # check if the request was successful
+    check_request_status(handle_request)
+
+    handle_request_id = handle_request.json()['handleRequestId']
+
+    answer_headers = {
+        "Content-Type": "application/json",
+        "Knowledge-Base-Id": knowledge_base_id,
+        "Knowledge-Interaction-Id": knowledge_interaction_id,
+    }
+
+    answer_data = {
+        "handleRequestId": handle_request_id,
+        "answerBindingSet": answer_binding_set,
+    }
+
+    r = httpx.post(knowledge_engine_url + '/sc/handle', headers=answer_headers, json=answer_data)
 
     # check if the request was successful
     check_request_status(r)
