@@ -3,6 +3,7 @@ This is a python wrapper for the Knowledge Engine Smart Connector REST API.
 See https://gitlab.inesctec.pt/interconnect-public/knowledge-engine/-/blob/main/openapi-sc.yaml
 """
 
+import datetime
 import logging
 
 import httpx
@@ -21,6 +22,10 @@ class SmartConnector(BaseModel):
     knowledgeBaseName: str
     knowledgeBaseDescription: str
     reasonerEnabled: bool
+
+
+def get_timestamp_now():
+    return datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()  # ISO 8601
 
 
 def check_request_status(r):
@@ -90,32 +95,28 @@ def perform_ask_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge_ba
 
 
 def perform_answer_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge_base_id: AnyUrl,
-                                         knowledge_interaction_id: AnyUrl, answer_binding_set: dict):
+                                         knowledge_interaction_id: AnyUrl, answer_binding_set: str):
+    # get a handle request id
     handle_headers = {
         "Content-Type": "application/json",
         "Knowledge-Base-Id": knowledge_base_id,
     }
-
     handle_request = httpx.get(knowledge_engine_url + '/sc/handle', headers=handle_headers, timeout=None)
-
     # check if the request was successful
     check_request_status(handle_request)
-
     handle_request_id = handle_request.json()['handleRequestId']
 
+    # answer the Knowledge Interaction
     answer_headers = {
         "Content-Type": "application/json",
         "Knowledge-Base-Id": knowledge_base_id,
         "Knowledge-Interaction-Id": knowledge_interaction_id,
     }
-
     answer_data = {
         "handleRequestId": handle_request_id,
         "answerBindingSet": answer_binding_set,
     }
-
     r = httpx.post(knowledge_engine_url + '/sc/handle', headers=answer_headers, json=answer_data)
-
     # check if the request was successful
     check_request_status(r)
 
