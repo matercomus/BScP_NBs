@@ -114,7 +114,7 @@ def perform_answer_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge
     }
     answer_data = {
         "handleRequestId": handle_request_id,
-        "answerBindingSet": answer_binding_set,
+        "bindingSet": answer_binding_set,
     }
     r = httpx.post(knowledge_engine_url + '/sc/handle', headers=answer_headers, json=answer_data)
     # check if the request was successful
