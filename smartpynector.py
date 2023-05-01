@@ -6,7 +6,7 @@ See https://gitlab.inesctec.pt/interconnect-public/knowledge-engine/-/blob/main/
 import datetime
 import logging
 
-import httpx
+import requests
 from pydantic import BaseModel, AnyUrl
 
 # set up logging
@@ -48,7 +48,7 @@ def create_smart_connector(smart_connector_obj: SmartConnector, knowledge_engine
         'Content-Type': 'application/json',
         'Knowledge-Base-Id': smart_connector_obj.knowledgeBaseId,
     }
-    r = httpx.post(knowledge_engine_url + '/sc', headers=headers, json=smart_connector_obj.dict())
+    r = requests.post(knowledge_engine_url + '/sc', headers=headers, json=smart_connector_obj.dict())
 
     # check if the request was successful
     check_request_status(r)
@@ -71,22 +71,26 @@ def register_knowledge_interaction(knowledge_interaction_type: str, knowledge_en
         "graphPattern": graph_pattern,
     }
 
-    r = httpx.post(knowledge_engine_url + '/sc/ki', headers=headers, json=ki_data)
+    r = requests.post(knowledge_engine_url + '/sc/ki', headers=headers, json=ki_data)
 
     # check if the request was successful
     check_request_status(r)
 
-    return r
+    # add the prefixes dictionary to the result dictionary
+    result = r.json()
+    result["prefixes"] = prefixes
+
+    return result
 
 
 def perform_ask_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge_base_id: AnyUrl,
-                                      knowledge_interaction_id: AnyUrl, ask_data: dict = []):
+                                      knowledge_interaction_id: AnyUrl, ask_data: list[dict[str, str]]):
     headers = {
         "Knowledge-Base-Id": knowledge_base_id,
         "Knowledge-Interaction-Id": knowledge_interaction_id,
     }
 
-    r = httpx.post(knowledge_engine_url + '/sc/ask', headers=headers, json=ask_data)
+    r = requests.post(knowledge_engine_url + '/sc/ask', headers=headers, json=ask_data)
 
     # check if the request was successful
     check_request_status(r)
@@ -95,15 +99,23 @@ def perform_ask_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge_ba
 
 
 def perform_answer_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge_base_id: AnyUrl,
-                                         knowledge_interaction_id: AnyUrl, answer_binding_set: str):
+                                         knowledge_interaction_id: AnyUrl, answer_binding_set: list[dict[str, str]]):
     # get a handle request id
     handle_headers = {
         "Content-Type": "application/json",
         "Knowledge-Base-Id": knowledge_base_id,
     }
-    handle_request = httpx.get(knowledge_engine_url + '/sc/handle', headers=handle_headers, timeout=None)
+    # create a session with retries to avoid 202 errors
+    # s = requests.Session()
+    # retries = Retry(backoff_factor=1, status_forcelist=[i for i in range(202, 500)])
+    # s.mount('https://', HTTPAdapter(max_retries=retries))
+
+    # make the handle request
+    handle_request = requests.get(knowledge_engine_url + '/sc/handle', headers=handle_headers, timeout=None)
+
     # check if the request was successful
-    check_request_status(handle_request)
+    # check_request_status(handle_request)
+
     handle_request_id = handle_request.json()['handleRequestId']
 
     # answer the Knowledge Interaction
@@ -116,8 +128,8 @@ def perform_answer_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge
         "handleRequestId": handle_request_id,
         "bindingSet": answer_binding_set,
     }
-    r = httpx.post(knowledge_engine_url + '/sc/handle', headers=answer_headers, json=answer_data)
+    r = requests.post(knowledge_engine_url + '/sc/handle', headers=answer_headers, json=answer_data)
     # check if the request was successful
-    check_request_status(r)
+    # check_request_status(r)
 
     return r
