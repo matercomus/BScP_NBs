@@ -5,6 +5,7 @@ See https://gitlab.inesctec.pt/interconnect-public/knowledge-engine/-/blob/main/
 
 import datetime
 import logging
+from typing import Any
 
 import requests
 from pydantic import BaseModel, AnyUrl
@@ -137,18 +138,18 @@ def perform_answer_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge
     return r
 
 
-def inject_binding_set_into_graph_pattern(graph_pattern, binding_set):
+def inject_binding_set_into_graph_pattern(graph_pattern: str, binding_set: list[dict[str, str]]) -> list[str]:
     for binding in binding_set:
         for key, value in binding.items():
             graph_pattern = graph_pattern.replace('?' + key, value)
-    # Remove < and > characters from graph_pattern
+    # Remove < and > characters from GRAPH_PATTERN
     graph_pattern = graph_pattern.replace('<', '').replace('>', '')
     graph_pattern = graph_pattern.splitlines()
     graph_pattern = [line.strip() for line in graph_pattern if line.strip()]
     return graph_pattern
 
 
-def replace_prefixes_with_uris(graph_pattern, prefixes):
+def replace_prefixes_with_uris(graph_pattern: list[str], prefixes: dict) -> list[str | Any]:
     result = []
     for line in graph_pattern:
         for prefix, uri in prefixes.items():
@@ -157,7 +158,7 @@ def replace_prefixes_with_uris(graph_pattern, prefixes):
     return result
 
 
-def convert_to_turtle_rdf(graph_pattern, binding_set, prefixes):
+def convert_to_turtle_rdf(graph_pattern: str, binding_set: list[dict[str, str]], prefixes: dict) -> str:
     rdf = inject_binding_set_into_graph_pattern(graph_pattern, binding_set)
     rdf = replace_prefixes_with_uris(rdf, prefixes)
     result = []
@@ -171,15 +172,15 @@ def convert_to_turtle_rdf(graph_pattern, binding_set, prefixes):
     return '\n'.join(result)
 
 
-def save_graph_to_graphdb(graph, read_url, write_url):
+def save_graph_to_graphdb(graph, read_url: str, write_url: str):
     store = sparqlstore.SPARQLUpdateStore()
     store.open((read_url, write_url))
     store.add_graph(graph)
 
 
-def store_data_in_graphdb(graph_pattern, binding_set, prefixes, read_url, write_url):
+def store_data_in_graphdb(graph_pattern: str, binding_set: list[dict[str, str]],
+                          prefixes: dict, read_url: str, write_url: str):
     turtle_rdf = convert_to_turtle_rdf(graph_pattern, binding_set, prefixes)
-    # print(turtle_rdf)
     g = Graph(identifier=URIRef("http://example.org/mygraph"))
     g.parse(data=turtle_rdf, format="turtle")
     g.print()
