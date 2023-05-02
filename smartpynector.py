@@ -8,6 +8,8 @@ import logging
 
 import requests
 from pydantic import BaseModel, AnyUrl
+from rdflib import Graph, URIRef
+from rdflib.plugins.stores import sparqlstore
 
 # set up logging
 logging.basicConfig(
@@ -133,3 +135,52 @@ def perform_answer_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge
     # check_request_status(r)
 
     return r
+
+
+def inject_binding_set_into_graph_pattern(graph_pattern, binding_set):
+    for binding in binding_set:
+        for key, value in binding.items():
+            graph_pattern = graph_pattern.replace('?' + key, value)
+    # Remove < and > characters from graph_pattern
+    graph_pattern = graph_pattern.replace('<', '').replace('>', '')
+    graph_pattern = graph_pattern.splitlines()
+    graph_pattern = [line.strip() for line in graph_pattern if line.strip()]
+    return graph_pattern
+
+
+def replace_prefixes_with_uris(graph_pattern, prefixes):
+    result = []
+    for line in graph_pattern:
+        for prefix, uri in prefixes.items():
+            line = line.replace(prefix + ':', uri).replace('"', '')
+        result.append(line)
+    return result
+
+
+def convert_to_turtle_rdf(graph_pattern, binding_set, prefixes):
+    rdf = inject_binding_set_into_graph_pattern(graph_pattern, binding_set)
+    rdf = replace_prefixes_with_uris(rdf, prefixes)
+    result = []
+    for line in rdf:
+        subject, predicate, obj = line.split()[:3]
+        if obj.startswith('http'):
+            obj = f'<{obj}>'
+        else:
+            obj = f'"{obj}"'
+        result.append(f'<{subject}> <{predicate}> {obj} .')
+    return '\n'.join(result)
+
+
+def save_graph_to_graphdb(graph, read_url, write_url):
+    store = sparqlstore.SPARQLUpdateStore()
+    store.open((read_url, write_url))
+    store.add_graph(graph)
+
+
+def store_data_in_graphdb(graph_pattern, binding_set, prefixes, read_url, write_url):
+    turtle_rdf = convert_to_turtle_rdf(graph_pattern, binding_set, prefixes)
+    # print(turtle_rdf)
+    g = Graph(identifier=URIRef("http://example.org/mygraph"))
+    g.parse(data=turtle_rdf, format="turtle")
+    g.print()
+    save_graph_to_graphdb(g, read_url, write_url)
