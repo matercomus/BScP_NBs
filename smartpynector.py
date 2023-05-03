@@ -10,7 +10,7 @@ from typing import Any
 import requests
 from pydantic import BaseModel, AnyUrl
 from rdflib import Graph, URIRef
-# from rdflib.plugins.stores import sparqlstore, 
+# from rdflib.plugins.stores import sparqlstore,
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore, Store
 
 # set up logging
@@ -140,23 +140,31 @@ def perform_answer_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge
 
 
 def inject_binding_set_into_graph_pattern(graph_pattern: str, binding_set: list[dict[str, str]]) -> list[str]:
-    for binding in binding_set:
-        for key, value in binding.items():
-            graph_pattern = graph_pattern.replace('?' + key, value)
-    # Remove < and > characters from GRAPH_PATTERN
-    graph_pattern = graph_pattern.replace('<', '').replace('>', '')
-    graph_pattern = graph_pattern.splitlines()
-    graph_pattern = [line.strip() for line in graph_pattern if line.strip()]
-    return graph_pattern
+    # check if the binding set is empty
+    if binding_set in [None, []]:
+        raise ValueError('binding_set cannot be empty')
+    else:
+        for binding in binding_set:
+            for key, value in binding.items():
+                graph_pattern = graph_pattern.replace('?' + key, value)
+        # Remove < and > characters from GRAPH_PATTERN
+        graph_pattern = graph_pattern.replace('<', '').replace('>', '')
+        graph_pattern = graph_pattern.splitlines()
+        graph_pattern = [line.strip() for line in graph_pattern if line.strip()]
+        return graph_pattern
 
 
 def replace_prefixes_with_uris(graph_pattern: list[str], prefixes: dict) -> list[str | Any]:
-    result = []
-    for line in graph_pattern:
-        for prefix, uri in prefixes.items():
-            line = line.replace(prefix + ':', uri).replace('"', '')
-        result.append(line)
-    return result
+    # check if the prefixes dictionary is empty
+    if prefixes in [None, {}]:
+        raise ValueError('prefixes cannot be empty')
+    else:
+        result = []
+        for line in graph_pattern:
+            for prefix, uri in prefixes.items():
+                line = line.replace(prefix + ':', uri).replace('"', '')
+            result.append(line)
+        return result
 
 
 def convert_to_turtle_rdf(graph_pattern: str, binding_set: list[dict[str, str]], prefixes: dict) -> str:
@@ -190,4 +198,11 @@ def store_data_in_graphdb(graph_pattern: str, binding_set: list[dict[str, str]],
     g = Graph(identifier=URIRef("http://example.org/mygraph"), store=store)
     g.parse(data=turtle_rdf, format="turtle")
     set_store_header_update(store)
-    store.add_graph(g)
+    # TODO: fix this 500 error
+    try:
+        store.add_graph(g)
+    except Exception as e:
+        if hasattr(e, 'code') and e.code == 500:
+            print("Ignoring 500 server error")
+        else:
+            raise e
