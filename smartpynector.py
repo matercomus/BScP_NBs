@@ -61,19 +61,30 @@ def create_smart_connector(smart_connector_obj: SmartConnector, knowledge_engine
 
 
 # TODO: add support for other types of Knowledge Interactions
-def register_knowledge_interaction(knowledge_interaction_type: str, knowledge_engine_url: AnyUrl, prefixes: dict,
-                                   graph_pattern: str, headers: dict):
+def register_knowledge_interaction(knowledge_interaction_type: str, knowledge_engine_url: AnyUrl, prefixes: dict = None,
+                                   graph_pattern: str = None, headers: dict = None, argument_graph_pattern: str = None,
+                                   result_graph_pattern: str = None):
     # check if the knowledge_interaction_type is valid
-    ki_types = ['AskKnowledgeInteraction', 'AnswerKnowledgeInteraction']
+    ki_types = ['AskKnowledgeInteraction', 'AnswerKnowledgeInteraction', "ReactKnowledgeInteraction"]
     if knowledge_interaction_type not in ki_types:
         raise ValueError('knowledge_interaction_type must be one of the following: ' + str(ki_types))
 
     # data of the Knowledge Interaction
-    ki_data = {
-        "knowledgeInteractionType": knowledge_interaction_type,
-        "prefixes": prefixes,
-        "graphPattern": graph_pattern,
-    }
+    if knowledge_interaction_type in ['AskKnowledgeInteraction', 'AnswerKnowledgeInteraction']:
+        ki_data = {
+            "knowledgeInteractionType": knowledge_interaction_type,
+            "prefixes": prefixes,
+            "graphPattern": graph_pattern,
+        }
+    elif knowledge_interaction_type == "ReactKnowledgeInteraction":
+        ki_data = {
+            "knowledgeInteractionType": knowledge_interaction_type,
+            "argumentGraphPattern": argument_graph_pattern,
+            "resultGraphPattern": result_graph_pattern,
+            "prefixes": prefixes,
+        }
+    else:
+        raise ValueError('knowledge_interaction_type must be one of the following: ' + str(ki_types))
 
     r = requests.post(knowledge_engine_url + '/sc/ki', headers=headers, json=ki_data)
 
@@ -199,6 +210,6 @@ def store_data_in_graphdb(graph_pattern: str, binding_set: list[dict[str, str]],
         store.add_graph(g)
     except Exception as e:
         if hasattr(e, 'code') and e.code == 500:
-            print("Ignoring 500 server error")
+            logging.debug("Ignoring 500 server error")
         else:
             raise e
