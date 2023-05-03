@@ -80,11 +80,7 @@ def register_knowledge_interaction(knowledge_interaction_type: str, knowledge_en
     # check if the request was successful
     check_request_status(r)
 
-    # add the prefixes dictionary to the result dictionary
-    result = r.json()
-    result["prefixes"] = prefixes
-
-    return result
+    return r
 
 
 def perform_ask_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge_base_id: AnyUrl,
