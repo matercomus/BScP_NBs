@@ -10,7 +10,8 @@ from typing import Any
 import requests
 from pydantic import BaseModel, AnyUrl
 from rdflib import Graph, URIRef
-from rdflib.plugins.stores import sparqlstore
+# from rdflib.plugins.stores import sparqlstore, 
+from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore, Store
 
 # set up logging
 logging.basicConfig(
@@ -172,16 +173,21 @@ def convert_to_turtle_rdf(graph_pattern: str, binding_set: list[dict[str, str]],
     return '\n'.join(result)
 
 
-def save_graph_to_graphdb(graph, read_url: str, write_url: str):
-    store = sparqlstore.SPARQLUpdateStore()
-    store.open((read_url, write_url))
-    store.add_graph(graph)
+def set_store_header_update(store: Store):
+    """Call this function before any `Graph.add()` calls to set the appropriate request headers."""
+    if 'headers' not in store.kwargs:
+        store.kwargs.update({'headers': {}})
+    store.kwargs['headers'].update({'content-type': 'application/sparql-update'})
 
 
 def store_data_in_graphdb(graph_pattern: str, binding_set: list[dict[str, str]],
                           prefixes: dict, read_url: str, write_url: str):
     turtle_rdf = convert_to_turtle_rdf(graph_pattern, binding_set, prefixes)
-    g = Graph(identifier=URIRef("http://example.org/mygraph"))
+    store = SPARQLUpdateStore(query_endpoint=read_url, update_endpoint=write_url,
+                              context_aware=True, postAsEncoded=False)
+    store.debug = True
+    store.method = 'POST'
+    g = Graph(identifier=URIRef("http://example.org/mygraph"), store=store)
     g.parse(data=turtle_rdf, format="turtle")
-    g.print()
-    save_graph_to_graphdb(g, read_url, write_url)
+    set_store_header_update(store)
+    store.add_graph(g)
