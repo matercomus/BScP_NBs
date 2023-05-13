@@ -13,7 +13,6 @@ import requests
 from SPARQLWrapper import SPARQLWrapper
 from pydantic import BaseModel, AnyUrl
 from rdflib import Graph, URIRef
-# from rdflib.plugins.stores import sparqlstore,
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore, Store
 
 # set up logging
@@ -233,8 +232,7 @@ def read_triples_from_graphdb(read_url: str, write_url: str):
     g = Graph(identifier=URIRef("http://example.org/mygraph"), store=store)
     # Read some triples.
     set_store_header_read(store)
-    for triple in g.triples((None, None, None)):
-        print(triple)
+    return g.triples((None, None, None))
 
 
 def run_sparql_query(endpoint, query, return_format: str = "json"):
