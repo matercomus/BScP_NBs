@@ -5,9 +5,12 @@ See https://gitlab.inesctec.pt/interconnect-public/knowledge-engine/-/blob/main/
 
 import datetime
 import logging
-from typing import Any
+from typing import Any, Dict, Optional
 
+import pandas as pd
+import rdflib as rdflib
 import requests
+from SPARQLWrapper import SPARQLWrapper
 from pydantic import BaseModel, AnyUrl
 from rdflib import Graph, URIRef
 # from rdflib.plugins.stores import sparqlstore,
@@ -195,6 +198,13 @@ def set_store_header_update(store: Store):
     store.kwargs['headers'].update({'content-type': 'application/sparql-update'})
 
 
+def set_store_header_read(store: Store):
+    """Call this function before any `Graph.triples()` calls to set the appropriate request headers."""
+    if 'headers' not in store.kwargs:
+        store.kwargs.update({'headers': {}})
+    store.kwargs['headers'].pop('content-type', None)
+
+
 def store_data_in_graphdb(graph_pattern: str, binding_set: list[dict[str, str]],
                           prefixes: dict, read_url: str, write_url: str):
     turtle_rdf = convert_to_turtle_rdf(graph_pattern, binding_set, prefixes)
@@ -213,3 +223,70 @@ def store_data_in_graphdb(graph_pattern: str, binding_set: list[dict[str, str]],
             logging.debug("Ignoring 500 server error")
         else:
             raise e
+
+
+def read_triples_from_graphdb(read_url: str, write_url: str):
+    store = SPARQLUpdateStore(query_endpoint=read_url, update_endpoint=write_url,
+                              context_aware=True, postAsEncoded=False)
+    store.debug = True
+    store.method = 'POST'
+    g = Graph(identifier=URIRef("http://example.org/mygraph"), store=store)
+    # Read some triples.
+    set_store_header_read(store)
+    for triple in g.triples((None, None, None)):
+        print(triple)
+
+
+def run_sparql_query(endpoint, query, return_format: str = "json"):
+    sparql = SPARQLWrapper(endpoint)
+    sparql.setQuery(query)
+    sparql.setReturnFormat(return_format.lower())
+    results = sparql.query().convert()
+    return results
+
+
+def sparql_results_to_df(results):
+    cols = results['head']['vars']
+    out = []
+    for row in results['results']['bindings']:
+        item = {}
+        for c in cols:
+            item[c] = row.get(c, {}).get('value')
+        out.append(item)
+    return pd.DataFrame(out)
+
+
+def convert_sparql_results_to_graph(
+        results: Dict,
+        subject_var: Optional[str] = None,
+        predicate_var: Optional[str] = None,
+        object_var: Optional[str] = None
+) -> rdflib.Graph:
+    """
+    Convert SPARQL query results in JSON format into an rdflib.Graph object.
+
+    :param results: The result of a SPARQL query in JSON format.
+    :param subject_var: The name of the variable to use as the subject of each triple.
+    :param predicate_var: The name of the variable to use as the predicate of each triple.
+    :param object_var: The name of the variable to use as the object of each triple.
+    :return: An rdflib.Graph object containing the data from the SPARQL query results.
+    """
+    g = rdflib.Graph()
+    if len(results["results"]["bindings"]) > 0:
+        first_result = results["results"]["bindings"][0]
+        variables = list(first_result.keys())
+        if subject_var is None and len(variables) >= 1:
+            subject_var = variables[0]
+        if predicate_var is None and len(variables) >= 2:
+            predicate_var = variables[1]
+        if object_var is None and len(variables) >= 3:
+            object_var = variables[2]
+        for result in results["results"]["bindings"]:
+            s = rdflib.URIRef(result[subject_var]["value"])
+            p = rdflib.URIRef(result[predicate_var]["value"])
+            if result[object_var]["type"] == "uri":
+                o = rdflib.URIRef(result[object_var]["value"])
+            else:
+                o = rdflib.Literal(result[object_var]["value"])
+            g.add((s, p, o))
+    return g
