@@ -4,7 +4,6 @@ See https://gitlab.inesctec.pt/interconnect-public/knowledge-engine/-/blob/main/
 """
 
 import datetime
-import time
 import logging
 from typing import Any, Dict, Optional
 
@@ -140,9 +139,9 @@ def perform_answer_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge
             if r.ok:
                 return r
             else:
-                logging.warn(f"received unexpected status {r.status_code}")
-                logging.warn(r.text)
-                logging.info("retrying after a short timeout")
+                logger.warn(f"received unexpected status {r.status_code}")
+                logger.warn(r.text)
+                logger.info("retrying after a short timeout")
                 time.sleep(2)
                 continue
         elif handle_request.status_code == 202:
@@ -152,90 +151,15 @@ def perform_answer_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge
             # 410 means: KE has stopped, so terminate
             break
         else:
-            logging.warn(f"received unexpected status {handle_request.status_code}")
-            logging.warn(handle_request.text)
-            logging.info("retrying after a short timeout")
+            logger.warn(f"received unexpected status {handle_request.status_code}")
+            logger.warn(handle_request.text)
+            logger.info("retrying after a short timeout")
             time.sleep(2)
             continue
 
-    logging.info(f"exiting perform_answer_knowledge_interaction")
+    logger.info(f"exiting perform_answer_knowledge_interaction")
+
     
-
-def post(knowledge_engine_url: AnyUrl, 
-         knowledge_base_id: AnyUrl,
-         knowledge_interaction_id: AnyUrl, 
-         argument_binding_set: list[dict[str, str]]
-) -> list[dict[str, str]]:
-    """
-    POST bindings for a POST knowledge interactions
-    """
-    response = requests.post(
-        knowledge_engine_url + "/sc/post",
-        headers={"Knowledge-Base-Id": knowledge_base_id, "Knowledge-Interaction-Id": knowledge_interaction_id},
-        json=argument_binding_set,
-    )
-    assert response.ok
-
-    return response
-    
-
-def perform_react_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge_base_id: AnyUrl,
-                                        knowledge_interaction_id: AnyUrl, argument_binding_set: list[dict[str, str]]):
-    while True:
-        # get a handle request id
-        handle_headers = {
-            "Content-Type": "application/json",
-            "Knowledge-Base-Id": knowledge_base_id,
-        }
-
-        # make the handle request
-        print('getting')
-        logging.info("getting")
-        handle_request = requests.get(knowledge_engine_url + '/sc/handle', headers=handle_headers, timeout=None)
-        print(handle_request.text)
-
-
-        if handle_request.status_code == 200:
-            handle_request_id = handle_request.json()['handleRequestId']
-            print('200')
-            logging.info("200")
-
-            # react to the Knowledge Interaction
-            react_headers = {
-                "Content-Type": "application/json",
-                "Knowledge-Base-Id": knowledge_base_id,
-                "Knowledge-Interaction-Id": knowledge_interaction_id,
-            }
-            react_data = {
-                "handleRequestId": handle_request_id,
-                "bindingSet": argument_binding_set,
-            }
-            r = requests.post(knowledge_engine_url + '/sc/handle', headers=react_headers, json=react_data)
-
-            if r.ok:
-                print('ok')
-                return r
-            else:
-                logging.warn(f"received unexpected status {r.status_code}")
-                logging.warn(r.text)
-                logging.info("retrying after a short timeout")
-                time.sleep(2)
-                continue
-        elif handle_request.status_code == 202:
-            print('repoll')
-            # 202 means: repoll (heartbeat)
-            continue
-        elif handle_request.status_code == 410:
-            # 410 means: KE has stopped, so terminate
-            break
-        else:
-            logging.warn(f"received unexpected status {handle_request.status_code}")
-            logging.warn(handle_request.text)
-            logging.info("retrying after a short timeout")
-            time.sleep(2)
-            continue
-
-    logging.info(f"exiting perform_react_knowledge_interaction")
 
 
 def inject_binding_set_into_graph_pattern(graph_pattern: str, binding_set: list[dict[str, str]]) -> list[str]:
