@@ -1,6 +1,6 @@
 import logging
 import time
-
+import datetime
 import requests
 
 logging.basicConfig(level=logging.INFO)
@@ -267,3 +267,6 @@ def start_handle_loop(handlers: dict[str, callable], kb_id: str, ke_endpoint: st
             continue
 
     logger.info(f"exiting handle loop")
+
+def get_timestamp_now():
+    return datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()  # ISO 8601

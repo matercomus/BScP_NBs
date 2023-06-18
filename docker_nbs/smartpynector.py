@@ -161,81 +161,68 @@ def perform_answer_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge
     logging.info(f"exiting perform_answer_knowledge_interaction")
     
 
-def post(knowledge_engine_url: AnyUrl, 
-         knowledge_base_id: AnyUrl,
-         knowledge_interaction_id: AnyUrl, 
-         argument_binding_set: list[dict[str, str]]
-) -> list[dict[str, str]]:
-    """
-    POST bindings for a POST knowledge interactions
-    """
-    response = requests.post(
-        knowledge_engine_url + "/sc/post",
-        headers={"Knowledge-Base-Id": knowledge_base_id, "Knowledge-Interaction-Id": knowledge_interaction_id},
-        json=argument_binding_set,
-    )
-    assert response.ok
 
-    return response
-    
+    return response.json()["resultBindingSet"]
 
-def perform_react_knowledge_interaction(knowledge_engine_url: AnyUrl, knowledge_base_id: AnyUrl,
-                                        knowledge_interaction_id: AnyUrl, argument_binding_set: list[dict[str, str]]):
+
+def start_handle_loop(handlers: dict[str, callable], kb_id: str, ke_endpoint: str):
+    """
+    Start the handle loop, where it will long poll to a route that returns a
+    handle request when it arrives.
+
+    Once a handle request is returns (on status 200) for an ANSWER/REACT, it
+    will be handled by the corresponding knowledge interaction handler given in
+    `handlers` (keyed by the knowledge interaction ID), and the result is passed
+    back to the KE.
+    """
     while True:
-        # get a handle request id
-        handle_headers = {
-            "Content-Type": "application/json",
-            "Knowledge-Base-Id": knowledge_base_id,
-        }
+        response = requests.get(
+            ke_endpoint + "sc/handle", headers={"Knowledge-Base-Id": kb_id}
+        )
 
-        # make the handle request
-        print('getting')
-        logging.info("getting")
-        handle_request = requests.get(knowledge_engine_url + '/sc/handle', headers=handle_headers, timeout=None)
-        print(handle_request.text)
+        if response.status_code == 200:
+            # 200 means: we receive bindings that we need to handle, then repoll asap.
+            handle_request = response.json()
 
+            ki_id = handle_request["knowledgeInteractionId"]
+            handle_request_id = handle_request["handleRequestId"]
+            bindings = handle_request["bindingSet"]
 
-        if handle_request.status_code == 200:
-            handle_request_id = handle_request.json()['handleRequestId']
-            print('200')
-            logging.info("200")
+            assert ki_id in handlers
+            handler = handlers[ki_id]
 
-            # react to the Knowledge Interaction
-            react_headers = {
-                "Content-Type": "application/json",
-                "Knowledge-Base-Id": knowledge_base_id,
-                "Knowledge-Interaction-Id": knowledge_interaction_id,
-            }
-            react_data = {
-                "handleRequestId": handle_request_id,
-                "bindingSet": argument_binding_set,
-            }
-            r = requests.post(knowledge_engine_url + '/sc/handle', headers=react_headers, json=react_data)
+            # pass the bindings to the handler, and let it handle them
+            result_bindings = handler(bindings)
 
-            if r.ok:
-                print('ok')
-                return r
-            else:
-                logging.warn(f"received unexpected status {r.status_code}")
-                logging.warn(r.text)
-                logging.info("retrying after a short timeout")
-                time.sleep(2)
-                continue
-        elif handle_request.status_code == 202:
-            print('repoll')
+            handle_response = requests.post(
+                ke_endpoint + "sc/handle",
+                json={
+                    "handleRequestId": handle_request_id,
+                    "bindingSet": result_bindings,
+                },
+                headers={
+                    "Knowledge-Base-Id": kb_id,
+                    "Knowledge-Interaction-Id": ki_id,
+                },
+            )
+            assert handle_response.ok
+
+            continue
+        elif response.status_code == 202:
             # 202 means: repoll (heartbeat)
             continue
-        elif handle_request.status_code == 410:
+        elif response.status_code == 410:
             # 410 means: KE has stopped, so terminate
             break
         else:
-            logging.warn(f"received unexpected status {handle_request.status_code}")
-            logging.warn(handle_request.text)
-            logging.info("retrying after a short timeout")
+            logger.warn(f"received unexpected status {response.status_code}")
+            logger.warn(response.text)
+            logger.info("repolling after a short timeout")
             time.sleep(2)
             continue
 
-    logging.info(f"exiting perform_react_knowledge_interaction")
+    logger.info(f"exiting handle loop")
+
 
 
 def inject_binding_set_into_graph_pattern(graph_pattern: str, binding_set: list[dict[str, str]]) -> list[str]:
