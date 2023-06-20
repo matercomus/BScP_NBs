@@ -31,8 +31,7 @@ class SmartConnector(BaseModel):
     reasonerEnabled: bool
 
 
-def get_timestamp_now():
-    return datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()  # ISO 8601
+
 
 
 def create_smart_connector(smart_connector_obj: SmartConnector, knowledge_engine_url: str):
@@ -223,6 +222,11 @@ def start_handle_loop(handlers: dict[str, callable], kb_id: str, ke_endpoint: st
 
     logger.info(f"exiting handle loop")
 
+    
+#################################################################################################
+
+def get_timestamp_now():
+    return datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()  # ISO 8601
 
 
 def inject_binding_set_into_graph_pattern(graph_pattern: str, binding_set: list[dict[str, str]]) -> list[str]:
@@ -365,3 +369,10 @@ def convert_sparql_results_to_graph(
                 o = rdflib.Literal(result[object_var]["value"])
             g.add((s, p, o))
     return g
+
+def convert_graph_pattern_to_sparql(graph_pattern, prefixes):
+    prefix_str = ""
+    for prefix, uri in prefixes.items():
+        prefix_str += f"PREFIX {prefix}: <{uri}>\n"
+    query = f"{prefix_str}\nSELECT *\nWHERE {{\n{graph_pattern}\n}}"
+    return query
