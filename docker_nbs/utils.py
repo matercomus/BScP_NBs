@@ -1,3 +1,6 @@
+# These utilities were copied from https://github.com/TNO/knowledge-engine/blob/master/examples/rest-api/knowledge-bases/utils.py
+# and slightly modified to provide logs for failed handle responses.
+
 import logging
 import time
 import datetime
