@@ -61,6 +61,9 @@ def register_knowledge_base(
             "knowledgeBaseDescription": kb_description,
         },
     )
+    
+    if not response.ok:
+                logger.info(response.text)
     assert response.ok
 
     logger.info(f"registered {kb_name}")
@@ -85,6 +88,9 @@ def register_ask_knowledge_interaction(
         json=body,
         headers={"Knowledge-Base-Id": kb_id},
     )
+    
+    if not response.ok:
+                logger.info(response.text)
     assert response.ok
 
     ki_id = response.json()["knowledgeInteractionId"]
@@ -111,6 +117,9 @@ def register_answer_knowledge_interaction(
         json=body,
         headers={"Knowledge-Base-Id": kb_id},
     )
+    
+    if not response.ok:
+                logger.info(response.text)
     assert response.ok
 
     ki_id = response.json()["knowledgeInteractionId"]
@@ -141,6 +150,9 @@ def register_post_knowledge_interaction(
         json=body,
         headers={"Knowledge-Base-Id": kb_id},
     )
+    
+    if not response.ok:
+                logger.info(response.text)
     assert response.ok
 
     ki_id = response.json()["knowledgeInteractionId"]
@@ -171,6 +183,9 @@ def register_react_knowledge_interaction(
         json=body,
         headers={"Knowledge-Base-Id": kb_id},
     )
+    
+    if not response.ok:
+                logger.info(response.text)
     assert response.ok
 
     ki_id = response.json()["knowledgeInteractionId"]
@@ -189,6 +204,9 @@ def ask(
         headers={"Knowledge-Base-Id": kb_id, "Knowledge-Interaction-Id": ki_id},
         json=query_bindings,
     )
+    
+    if not response.ok:
+                logger.info(response.text)
     assert response.ok
 
     return response.json()["bindingSet"]
@@ -205,6 +223,9 @@ def post(
         headers={"Knowledge-Base-Id": kb_id, "Knowledge-Interaction-Id": ki_id},
         json=bindings,
     )
+    
+    if not response.ok:
+                logger.info(response.text)
     assert response.ok
 
     return response.json()["resultBindingSet"]
