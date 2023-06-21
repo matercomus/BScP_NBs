@@ -250,7 +250,9 @@ def start_handle_loop(handlers: dict[str, callable], kb_id: str, ke_endpoint: st
                     "Knowledge-Interaction-Id": ki_id,
                 },
             )
-            logger.info(handle_response.text)
+            
+            if not handle_response.ok:
+                logger.info(handle_response.text)
             assert handle_response.ok
 
             continue
