@@ -70,6 +70,21 @@ def register_knowledge_base(
     assert response.ok
 
     logger.info(f"registered {kb_name}")
+    
+    
+def delete_knowledge_base(kb_id: str, ke_endpoint: str):
+    """
+    Delete a Knowledge Base with the given id.
+    """
+    response = requests.delete(
+        ke_endpoint + "sc/",
+        headers={"Knowledge-Base-Id": kb_id},
+    )
+    
+    if not response.ok:
+                logger.info(response.text)
+
+    logger.info(f"deleted {kb_id}")
 
 
 def register_ask_knowledge_interaction(
