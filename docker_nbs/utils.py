@@ -83,8 +83,8 @@ def delete_knowledge_base(kb_id: str, ke_endpoint: str):
     
     if not response.ok:
                 logger.info(response.text)
-
-    logger.info(f"deleted {kb_id}")
+    else:
+        logger.info(f"deleted {kb_id}")
 
 
 def register_ask_knowledge_interaction(
