@@ -16,8 +16,8 @@ from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore, Store
 # set up logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 
@@ -25,10 +25,14 @@ def get_timestamp_now():
     """
     Returns the current timestamp in ISO 8601 format.
     """
-    return datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()  # ISO 8601
+    return (
+        datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
+    )  # ISO 8601
 
 
-def inject_binding_set_into_graph_pattern(graph_pattern: str, binding_set: list[dict[str, str]]) -> list[str]:
+def inject_binding_set_into_graph_pattern(
+    graph_pattern: str, binding_set: list[dict[str, str]]
+) -> list[str]:
     """
     Injects a binding set into a graph pattern.
 
@@ -38,19 +42,21 @@ def inject_binding_set_into_graph_pattern(graph_pattern: str, binding_set: list[
     """
     # check if the binding set is empty
     if binding_set in [None, []]:
-        raise ValueError('binding_set cannot be empty')
+        raise ValueError("binding_set cannot be empty")
     else:
         for binding in binding_set:
             for key, value in binding.items():
-                graph_pattern = graph_pattern.replace('?' + key, value)
+                graph_pattern = graph_pattern.replace("?" + key, value)
         # Remove < and > characters from GRAPH_PATTERN
-        graph_pattern = graph_pattern.replace('<', '').replace('>', '')
+        graph_pattern = graph_pattern.replace("<", "").replace(">", "")
         graph_pattern = graph_pattern.splitlines()
         graph_pattern = [line.strip() for line in graph_pattern if line.strip()]
         return graph_pattern
 
 
-def replace_prefixes_with_uris(graph_pattern: list[str], prefixes: dict) -> list[str | Any]:
+def replace_prefixes_with_uris(
+    graph_pattern: list[str], prefixes: dict
+) -> list[str | Any]:
     """
     Replaces prefixes with URIs in a given graph pattern.
 
@@ -60,17 +66,19 @@ def replace_prefixes_with_uris(graph_pattern: list[str], prefixes: dict) -> list
     """
     # check if the prefixes dictionary is empty
     if prefixes in [None, {}]:
-        raise ValueError('prefixes cannot be empty')
+        raise ValueError("prefixes cannot be empty")
     else:
         result = []
         for line in graph_pattern:
             for prefix, uri in prefixes.items():
-                line = line.replace(prefix + ':', uri).replace('"', '')
+                line = line.replace(prefix + ":", uri).replace('"', "")
             result.append(line)
         return result
 
 
-def convert_to_turtle_rdf(graph_pattern: str, binding_set: list[dict[str, str]], prefixes: dict) -> str:
+def convert_to_turtle_rdf(
+    graph_pattern: str, binding_set: list[dict[str, str]], prefixes: dict
+) -> str:
     """
     Converts a given graph pattern to Turtle RDF format.
 
@@ -84,12 +92,12 @@ def convert_to_turtle_rdf(graph_pattern: str, binding_set: list[dict[str, str]],
     result = []
     for line in rdf:
         subject, predicate, obj = line.split()[:3]
-        if obj.startswith('http'):
-            obj = f'<{obj}>'
+        if obj.startswith("http"):
+            obj = f"<{obj}>"
         else:
             obj = f'"{obj}"'
-        result.append(f'<{subject}> <{predicate}> {obj} .')
-    return '\n'.join(result)
+        result.append(f"<{subject}> <{predicate}> {obj} .")
+    return "\n".join(result)
 
 
 def set_store_header_update(store: Store):
@@ -98,11 +106,11 @@ def set_store_header_update(store: Store):
 
     :param store: The store object to set headers on.
     """
-    
+
     """Call this function before any `Graph.add()` calls to set the appropriate request headers."""
-    if 'headers' not in store.kwargs:
-        store.kwargs.update({'headers': {}})
-        store.kwargs['headers'].update({'content-type': 'application/sparql-update'})
+    if "headers" not in store.kwargs:
+        store.kwargs.update({"headers": {}})
+        store.kwargs["headers"].update({"content-type": "application/sparql-update"})
 
 
 def set_store_header_read(store: Store):
@@ -112,13 +120,18 @@ def set_store_header_read(store: Store):
     :param store: The store object to set headers on.
     """
     """Call this function before any `Graph.triples()` calls to set the appropriate request headers."""
-    if 'headers' not in store.kwargs:
-        store.kwargs.update({'headers': {}})
-        store.kwargs['headers'].pop('content-type', None)
+    if "headers" not in store.kwargs:
+        store.kwargs.update({"headers": {}})
+        store.kwargs["headers"].pop("content-type", None)
 
 
-def store_data_in_graphdb(graph_pattern: str, binding_set: list[dict[str, str]],
-                          prefixes: dict, read_url: str, write_url: str):
+def store_data_in_graphdb(
+    graph_pattern: str,
+    binding_set: list[dict[str, str]],
+    prefixes: dict,
+    read_url: str,
+    write_url: str,
+):
     """
     Store data in a graph database using the given graph pattern and binding set.
 
@@ -129,10 +142,14 @@ def store_data_in_graphdb(graph_pattern: str, binding_set: list[dict[str, str]],
     :param write_url: The URL of the SPARQL endpoint to use for writing data to the graph database.
     """
     turtle_rdf = convert_to_turtle_rdf(graph_pattern, binding_set, prefixes)
-    store = SPARQLUpdateStore(query_endpoint=read_url, update_endpoint=write_url,
-                              context_aware=True, postAsEncoded=False)
+    store = SPARQLUpdateStore(
+        query_endpoint=read_url,
+        update_endpoint=write_url,
+        context_aware=True,
+        postAsEncoded=False,
+    )
     store.debug = True
-    store.method = 'POST'
+    store.method = "POST"
     g = Graph(identifier=URIRef("http://example.org/mygraph"), store=store)
     g.parse(data=turtle_rdf, format="turtle")
     set_store_header_update(store)
@@ -140,7 +157,7 @@ def store_data_in_graphdb(graph_pattern: str, binding_set: list[dict[str, str]],
     try:
         store.add_graph(g)
     except Exception as e:
-        if hasattr(e, 'code') and e.code == 500:
+        if hasattr(e, "code") and e.code == 500:
             logging.debug("Ignoring 500 server error")
         else:
             raise e
@@ -154,10 +171,14 @@ def read_triples_from_graphdb(read_url: str, write_url: str):
     :param write_url: The URL of the SPARQL endpoint to use for writing data to the graph database.
     :return: An iterator over the triples in the graph database.
     """
-    store = SPARQLUpdateStore(query_endpoint=read_url, update_endpoint=write_url,
-                              context_aware=True, postAsEncoded=False)
+    store = SPARQLUpdateStore(
+        query_endpoint=read_url,
+        update_endpoint=write_url,
+        context_aware=True,
+        postAsEncoded=False,
+    )
     store.debug = True
-    store.method = 'POST'
+    store.method = "POST"
     g = Graph(identifier=URIRef("http://example.org/mygraph"), store=store)
     # Read some triples.
     set_store_header_read(store)
@@ -187,23 +208,22 @@ def sparql_results_to_df(results):
     :param results: The result of a SPARQL query in JSON format.
     :return: A pandas DataFrame containing the data from the SPARQL query results.
     """
-    
 
-    cols = results['head']['vars']
+    cols = results["head"]["vars"]
     out = []
-    for row in results['results']['bindings']:
+    for row in results["results"]["bindings"]:
         item = {}
         for c in cols:
-            item[c] = row.get(c, {}).get('value')
+            item[c] = row.get(c, {}).get("value")
         out.append(item)
     return pd.DataFrame(out)
 
 
 def convert_sparql_results_to_graph(
-        results: Dict,
-        subject_var: Optional[str] = None,
-        predicate_var: Optional[str] = None,
-        object_var: Optional[str] = None
+    results: Dict,
+    subject_var: Optional[str] = None,
+    predicate_var: Optional[str] = None,
+    object_var: Optional[str] = None,
 ) -> rdflib.Graph:
     """
     Convert SPARQL query results in JSON format into an rdflib.Graph object.
@@ -233,6 +253,7 @@ def convert_sparql_results_to_graph(
                 o = rdflib.Literal(result[object_var]["value"])
             g.add((s, p, o))
     return g
+
 
 def convert_graph_pattern_to_sparql(graph_pattern, prefixes):
     prefix_str = ""

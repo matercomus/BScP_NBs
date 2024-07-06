@@ -24,7 +24,7 @@ def add_sigterm_hook():
 
 
 def match_bindings(
-        query: list[dict[str, str]], source: list[dict[str, str]]
+    query: list[dict[str, str]], source: list[dict[str, str]]
 ) -> list[dict[str, str]]:
     """
     Given a list of query bindings and a list of source bindings, return the
@@ -51,7 +51,7 @@ def match_bindings(
 
 
 def register_knowledge_base(
-        kb_id: str, kb_name: str, kb_description: str, ke_endpoint: str
+    kb_id: str, kb_name: str, kb_description: str, ke_endpoint: str
 ):
     """
     Register a Knowledge Base with the given details at the given endpoint.
@@ -64,14 +64,14 @@ def register_knowledge_base(
             "knowledgeBaseDescription": kb_description,
         },
     )
-    
+
     if not response.ok:
-                logger.info(response.text)
+        logger.info(response.text)
     assert response.ok
 
     logger.info(f"registered {kb_name}")
-    
-    
+
+
 def delete_knowledge_base(kb_id: str, ke_endpoint: str):
     """
     Delete a Knowledge Base with the given id.
@@ -80,19 +80,19 @@ def delete_knowledge_base(kb_id: str, ke_endpoint: str):
         ke_endpoint + "sc/",
         headers={"Knowledge-Base-Id": kb_id},
     )
-    
+
     if not response.ok:
-                logger.info(response.text)
+        logger.info(response.text)
     else:
         logger.info(f"deleted {kb_id}")
 
 
 def register_ask_knowledge_interaction(
-        graph_pattern: str,
-        ki_name: str,
-        kb_id: str,
-        ke_endpoint: str,
-        prefixes: dict[str, str] = dict(),
+    graph_pattern: str,
+    ki_name: str,
+    kb_id: str,
+    ke_endpoint: str,
+    prefixes: dict[str, str] = dict(),
 ) -> str:
     body = {
         "knowledgeInteractionName": ki_name,
@@ -106,9 +106,9 @@ def register_ask_knowledge_interaction(
         json=body,
         headers={"Knowledge-Base-Id": kb_id},
     )
-    
+
     if not response.ok:
-                logger.info(response.text)
+        logger.info(response.text)
     assert response.ok
 
     ki_id = response.json()["knowledgeInteractionId"]
@@ -117,11 +117,11 @@ def register_ask_knowledge_interaction(
 
 
 def register_answer_knowledge_interaction(
-        graph_pattern: str,
-        ki_name: str,
-        kb_id: str,
-        ke_endpoint: str,
-        prefixes: dict[str, str] = dict(),
+    graph_pattern: str,
+    ki_name: str,
+    kb_id: str,
+    ke_endpoint: str,
+    prefixes: dict[str, str] = dict(),
 ) -> str:
     body = {
         "knowledgeInteractionName": ki_name,
@@ -135,9 +135,9 @@ def register_answer_knowledge_interaction(
         json=body,
         headers={"Knowledge-Base-Id": kb_id},
     )
-    
+
     if not response.ok:
-                logger.info(response.text)
+        logger.info(response.text)
     assert response.ok
 
     ki_id = response.json()["knowledgeInteractionId"]
@@ -146,12 +146,12 @@ def register_answer_knowledge_interaction(
 
 
 def register_post_knowledge_interaction(
-        argument_graph_pattern: str,
-        result_graph_pattern: str,
-        ki_name: str,
-        kb_id: str,
-        ke_endpoint: str,
-        prefixes: dict[str, str] = dict(),
+    argument_graph_pattern: str,
+    result_graph_pattern: str,
+    ki_name: str,
+    kb_id: str,
+    ke_endpoint: str,
+    prefixes: dict[str, str] = dict(),
 ) -> str:
     body = {
         "knowledgeInteractionName": ki_name,
@@ -168,9 +168,9 @@ def register_post_knowledge_interaction(
         json=body,
         headers={"Knowledge-Base-Id": kb_id},
     )
-    
+
     if not response.ok:
-                logger.info(response.text)
+        logger.info(response.text)
     assert response.ok
 
     ki_id = response.json()["knowledgeInteractionId"]
@@ -179,12 +179,12 @@ def register_post_knowledge_interaction(
 
 
 def register_react_knowledge_interaction(
-        argument_graph_pattern: str,
-        result_graph_pattern: str,
-        ki_name: str,
-        kb_id: str,
-        ke_endpoint: str,
-        prefixes: dict[str, str] = dict(),
+    argument_graph_pattern: str,
+    result_graph_pattern: str,
+    ki_name: str,
+    kb_id: str,
+    ke_endpoint: str,
+    prefixes: dict[str, str] = dict(),
 ) -> str:
     body = {
         "knowledgeInteractionName": ki_name,
@@ -201,9 +201,9 @@ def register_react_knowledge_interaction(
         json=body,
         headers={"Knowledge-Base-Id": kb_id},
     )
-    
+
     if not response.ok:
-                logger.info(response.text)
+        logger.info(response.text)
     assert response.ok
 
     ki_id = response.json()["knowledgeInteractionId"]
@@ -212,7 +212,7 @@ def register_react_knowledge_interaction(
 
 
 def ask(
-        query_bindings: list[dict[str, str]], ki_id: str, kb_id: str, ke_endpoint: str
+    query_bindings: list[dict[str, str]], ki_id: str, kb_id: str, ke_endpoint: str
 ) -> list[dict[str, str]]:
     """
     ASK for knowledge with query bindings to receive bindings for an ASK knowledge interaction.
@@ -222,16 +222,16 @@ def ask(
         headers={"Knowledge-Base-Id": kb_id, "Knowledge-Interaction-Id": ki_id},
         json=query_bindings,
     )
-    
+
     if not response.ok:
-                logger.info(response.text)
+        logger.info(response.text)
     assert response.ok
 
     return response.json()["bindingSet"]
 
 
 def post(
-        bindings: list[dict[str, str]], ki_id: str, kb_id: str, ke_endpoint: str
+    bindings: list[dict[str, str]], ki_id: str, kb_id: str, ke_endpoint: str
 ) -> list[dict[str, str]]:
     """
     POST bindings for a POST knowledge interactions
@@ -241,9 +241,9 @@ def post(
         headers={"Knowledge-Base-Id": kb_id, "Knowledge-Interaction-Id": ki_id},
         json=bindings,
     )
-    
+
     if not response.ok:
-                logger.info(response.text)
+        logger.info(response.text)
     assert response.ok
 
     return response.json()["resultBindingSet"]
@@ -289,7 +289,7 @@ def start_handle_loop(handlers: dict[str, callable], kb_id: str, ke_endpoint: st
                     "Knowledge-Interaction-Id": ki_id,
                 },
             )
-            
+
             if not handle_response.ok:
                 logger.info(handle_response.text)
             assert handle_response.ok
